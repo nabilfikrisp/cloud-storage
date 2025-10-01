@@ -1,13 +1,13 @@
 {
   "name": "cloud-storage",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.0.1",
+  "description": "cloud storage app with next and nest js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["nextjs", "nestjs", "cloud", "storage"],
+  "author": "nabilfikrisp",
   "license": "ISC",
-  "packageManager": "pnpm@10.15.1"
+  "packageManager": "pnpm@10.15.1",
+  "workspaces": ["apps/*", "packages/*"]
 }
