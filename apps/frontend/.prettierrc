@@ -3,5 +3,7 @@
   "singleQuote": false,
   "printWidth": 80,
   "trailingComma": "all",
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+
+  "plugins": ["prettier-plugin-tailwindcss"]
 }
