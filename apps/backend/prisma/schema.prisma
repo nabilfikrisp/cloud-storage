@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String  @map("password_hash")
+  username     String  @unique
+  avatar       String?
+  role         Role    @default(USER)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  auth      Auth[]
+  post      Post[]
+  savedPost SavedPost[]
+
+  @@index([role], name: "user_role_idx")
+  @@map("user")
+}
+
+enum Provider {
+  LOCAL
+  GOOGLE
+}
+
+model Auth {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  provider   Provider @default(LOCAL)
+  providerId String   @map("provider_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId], name: "auth_provider_provider_provider_id_key")
+  @@index([userId], name: "auth_provider_user_id_idx")
+  @@map("auth")
+}
+
+model Post {
+  id         String  @id @default(cuid())
+  userId     String  @map("user_id")
+  title      String
+  slug       String  @unique
+  excerpt    String
+  content    String
+  viewCount  Int     @default(0) @map("view_count")
+  isFeatured Boolean @default(false) @map("is_featured")
+  published  Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  PostCategory PostCategory[]
+  SavedPost    SavedPost[]
+
+  @@index([isFeatured, createdAt], name: "post_is_featured_created_at_idx")
+  @@index([published, createdAt], name: "post_published_created_at_idx")
+  @@index([published, viewCount], name: "post_published_view_count_idx")
+  @@index([userId], name: "post_user_id_idx")
+  @@map("post")
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  PostCategory PostCategory[]
+
+  @@map("category")
+}
+
+model PostCategory {
+  postId     String @map("post_id")
+  categoryId String @map("category_id")
+
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([postId, categoryId])
+  @@index([postId], name: "post_category_post_id_idx")
+  @@index([categoryId], name: "post_category_category_id_idx")
+  @@map("post_category")
+}
+
+model SavedPost {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  postId String @map("post_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "saved_post_user_id_idx")
+  @@map("saved_post")
+}

@@ -22,6 +22,10 @@
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true,
 
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true
