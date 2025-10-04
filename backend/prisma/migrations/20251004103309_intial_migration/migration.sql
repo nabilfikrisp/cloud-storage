@@ -8,7 +8,7 @@ CREATE TYPE "Provider" AS ENUM ('LOCAL', 'GOOGLE');
 CREATE TABLE "user" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "password_hash" TEXT NOT NULL,
+    "is_verified" BOOLEAN NOT NULL DEFAULT false,
     "username" TEXT NOT NULL,
     "avatar" TEXT,
     "role" "Role" NOT NULL DEFAULT 'USER',
@@ -24,6 +24,7 @@ CREATE TABLE "auth" (
     "user_id" TEXT NOT NULL,
     "provider" "Provider" NOT NULL DEFAULT 'LOCAL',
     "provider_id" TEXT NOT NULL,
+    "password_hash" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
