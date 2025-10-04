@@ -24,7 +24,7 @@
 
     "paths": {
       "@/*": ["./src/*"],
-      "@prisma-generated": ["./prisma/generated/index"]
+      "@prisma-generated": ["./generated/prisma/index"]
     },
 
     "strict": true,
