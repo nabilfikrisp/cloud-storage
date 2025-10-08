@@ -1,58 +1,47 @@
+import { AuthReq } from "@/common/interfaces/auth-req.interface";
+import { JwtPayload } from "@/common/interfaces/jwt-payload.interface";
 import {
   CanActivate,
   ExecutionContext,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Request } from "express";
-
-declare module "express" {
-  interface Request {
-    user?: JwtPayload;
-  }
-}
-
-interface JwtPayload {
-  sub: string;
-  username: string;
-}
+import { EnvService } from "../env/env.service";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
-    private configService: ConfigService,
+    private envService: EnvService,
   ) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request: Request = context.switchToHttp().getRequest();
+  async canActivate(context: ExecutionContext) {
+    const request: AuthReq = context.switchToHttp().getRequest();
+    const jwtSecret = this.envService.jwtSecret;
+
     const token = this.extractTokenFromHeader(request);
-
-    const jwtSecret = this.configService.get<string>("JWT_SECRET");
-    if (!jwtSecret) {
-      throw new UnauthorizedException("JWT secret not configured");
-    }
-
     if (!token) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException("Missing authentication token");
     }
+
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: jwtSecret,
       });
-      // 💡 We're assigning the payload to the request object here
-      // so that we can access it in our route handlers
       request.user = payload;
     } catch {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException("Invalid or expired token");
     }
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
+  private extractTokenFromHeader(request: Request) {
     const [type, token] = request.headers.authorization?.split(" ") ?? [];
-    return type === "Bearer" ? token : undefined;
+    if (type !== "Bearer") {
+      return undefined;
+    }
+    return token;
   }
 }

@@ -1,7 +1,8 @@
+import type { AuthReq } from "@/common/interfaces/auth-req.interface";
 import { Controller, Get, Param, Request, UseGuards } from "@nestjs/common";
-import { UserService } from "./user.service";
-import { AuthGuard } from "../auth/auth.guard";
 import { ApiBearerAuth } from "@nestjs/swagger";
+import { AuthGuard } from "../auth/auth.guard";
+import { UserService } from "./user.service";
 
 @Controller("users")
 export class UserController {
@@ -10,16 +11,8 @@ export class UserController {
   @Get("me")
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  async getMe(
-    @Request()
-    req: Request & {
-      user: { sub: string; username: string };
-    },
-  ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  async getMe(@Request() req: AuthReq) {
     const userId = req.user.sub;
-
-    console.log(req.user);
 
     const user = await this.userService.getMe(userId);
 

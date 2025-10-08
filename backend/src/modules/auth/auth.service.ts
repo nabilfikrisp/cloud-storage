@@ -54,13 +54,6 @@ export class AuthService {
     return { accessToken, user: auth.user };
   }
 
-  async checkEmailIsTaken(email: string): Promise<boolean> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
-    });
-    return existingUser ? true : false;
-  }
-
   async createUserAndAuth(signUpDto: SignUpDto) {
     const { email, username, password } = signUpDto;
     const passwordHash = await this.hashPassword(password);
@@ -84,6 +77,13 @@ export class AuthService {
 
       return newUser;
     });
+  }
+
+  async checkEmailIsTaken(email: string): Promise<boolean> {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    return existingUser ? true : false;
   }
 
   async getLocalAuth(email: string) {
