@@ -1,25 +1,64 @@
-import { ConflictException, Injectable } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { PrismaService } from "../prisma/prisma.service";
 import { SignUpDto } from "./dtos/sign-up.dto";
+import { SignInDto } from "./dtos/sign-in.dto";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
-  async signUp(signUpDto: SignUpDto) {
+  async signUpLocal(signUpDto: SignUpDto) {
     const { email } = signUpDto;
 
-    await this.ensureEmailIsNotTaken(email);
+    const emailIsTaken = await this.checkEmailIsTaken(email);
+    if (emailIsTaken) {
+      throw new ConflictException("Email is already taken"); // 409
+    }
 
-    return await this.createUserAndAuth(signUpDto);
+    const newUser = await this.createUserAndAuth(signUpDto);
+
+    return newUser;
   }
 
-  async ensureEmailIsNotTaken(email: string) {
+  async signInLocal(signInDto: SignInDto) {
+    const { email, password } = signInDto;
+
+    const auth = await this.getLocalAuth(email);
+
+    if (!auth || !auth.passwordHash) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    // to be implemented later
+    // if (!auth.user.isVerified) {
+    //   throw new ForbiddenException("Email not verified");
+    // }
+
+    const isValid = await this.validatePassword(password, auth.passwordHash);
+    if (!isValid) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    const payload = { sub: auth.user.id, username: auth.user.username };
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return { accessToken, user: auth.user };
+  }
+
+  async checkEmailIsTaken(email: string): Promise<boolean> {
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
-    if (existingUser) throw new ConflictException("Email is already in use");
+    return existingUser ? true : false;
   }
 
   async createUserAndAuth(signUpDto: SignUpDto) {
@@ -45,6 +84,20 @@ export class AuthService {
 
       return newUser;
     });
+  }
+
+  async getLocalAuth(email: string) {
+    const auth = await this.prisma.auth.findFirst({
+      where: {
+        provider: "LOCAL",
+        providerId: email,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    return auth;
   }
 
   async hashPassword(password: string): Promise<string> {
