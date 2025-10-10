@@ -8,8 +8,8 @@ export class SignInDto {
     example: "user@example.com",
     required: true,
   })
-  @IsEmail({}, { message: "Email must be a valid email address" })
   @Transform(({ value }) => value.toLowerCase().trim())
+  @IsEmail({}, { message: "Email must be a valid email address" })
   email!: string;
 
   @ApiProperty({

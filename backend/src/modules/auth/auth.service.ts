@@ -203,6 +203,34 @@ export class AuthService {
     return existingUser ? true : false;
   }
 
+  private async getLocalAuth(email: string) {
+    const auth = await this.prisma.auth.findFirst({
+      where: {
+        provider: Provider.LOCAL,
+        providerId: email,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    return auth;
+  }
+
+  // Password functions
+  private async hashPassword(password: string): Promise<string> {
+    const saltRounds = this.env.saltRounds;
+    return await bcrypt.hash(password, saltRounds);
+  }
+
+  private async validatePassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
+    return await bcrypt.compare(password, hash);
+  }
+
+  // Username functions
   private async generateRandomUniqueUsername(): Promise<string> {
     const adjectives = [
       "brave",
@@ -230,69 +258,55 @@ export class AuthService {
       "dream",
     ];
 
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const adjective =
-        adjectives[Math.floor(Math.random() * adjectives.length)];
-      const noun = nouns[Math.floor(Math.random() * nouns.length)];
-      const randomNumber = Math.floor(Math.random() * 10000);
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const base = `${adjective}_${noun}`;
 
-      const username = `${adjective}_${noun}_${randomNumber}`;
+    return await this.generateUniqueUsername(base);
+  }
+
+  private async displayNameToUsername(displayName: string): Promise<string> {
+    const words = displayName.split(/\s+/).filter(Boolean);
+    const base = words.length > 1 ? `${words[0]}${words[1]}` : words[0];
+
+    const sanitizedBase = this.sanitizeForUsername(base);
+    return await this.generateUniqueUsername(sanitizedBase);
+  }
+
+  private async generateUniqueUsername(baseUsername: string): Promise<string> {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const randomNumber = Math.floor(Math.random() * 10000);
+      const username = `${baseUsername}_${randomNumber}`;
 
       const existing = await this.checkUsernameIsTaken(username);
-
       if (!existing) {
         return username;
       }
     }
 
-    // fallback if all attempts collide
+    // Fallback if all attempts collide
     return `user_${Date.now()}`;
   }
 
-  private async displayNameToUsername(displayName: string) {
-    // Split display name into words
-    const words = displayName.split(/\s+/).filter(Boolean);
-
-    // Try first two words, fallback to first word if only one word
-    let base = words.length > 1 ? `${words[0]}${words[1]}` : words[0];
-
-    // Sanitize: remove non-alphanumeric and lowercase
-    base = base.replace(/[^a-z0-9]/gi, "").toLowerCase();
-
-    let username = base;
-    let counter = 1;
-
-    // Ensure uniqueness
-    while (await this.checkUsernameIsTaken(username)) {
-      username = `${base}${counter++}`;
+  private sanitizeForUsername(input: string): string {
+    if (!input || typeof input !== "string") {
+      return "user";
     }
 
-    return username;
-  }
+    // Convert to lowercase and replace non-alphanumeric with underscores
+    let sanitized = input.replace(/[^a-z0-9]/gi, "_").toLowerCase();
 
-  private async getLocalAuth(email: string) {
-    const auth = await this.prisma.auth.findFirst({
-      where: {
-        provider: Provider.LOCAL,
-        providerId: email,
-      },
-      include: {
-        user: true,
-      },
-    });
+    // Collapse multiple underscores into single underscores
+    sanitized = sanitized.replace(/_+/g, "_");
 
-    return auth;
-  }
+    // Remove leading/trailing underscores
+    sanitized = sanitized.replace(/^_+|_+$/g, "");
 
-  private async hashPassword(password: string): Promise<string> {
-    const saltRounds = this.env.saltRounds;
-    return await bcrypt.hash(password, saltRounds);
-  }
+    // If empty or too short after sanitization, return default
+    if (!sanitized || sanitized.length < 2) {
+      return "user";
+    }
 
-  private async validatePassword(
-    password: string,
-    hash: string,
-  ): Promise<boolean> {
-    return await bcrypt.compare(password, hash);
+    return sanitized;
   }
 }

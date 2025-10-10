@@ -15,8 +15,8 @@ export class SignUpDto {
     example: "user@example.com",
     required: true,
   })
-  @IsEmail({}, { message: "Email must be a valid email address" })
   @Transform(({ value }) => value.toLowerCase().trim())
+  @IsEmail({}, { message: "Email must be a valid email address" })
   email!: string;
 
   @ApiProperty({
@@ -25,12 +25,12 @@ export class SignUpDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => value?.toLowerCase().trim())
   @IsString({ message: "Username must be a string" })
   @Length(3, 20, { message: "Username must be between 3 and 20 characters" })
   @Matches(/^[a-zA-Z0-9_]+$/, {
     message: "Username can only contain letters, numbers, and underscores",
   })
-  @Transform(({ value }) => value.toLowerCase().trim())
   username?: string;
 
   @ApiProperty({
@@ -39,11 +39,11 @@ export class SignUpDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => value?.trim())
   @IsString({ message: "Display name must be a string" })
   @Length(3, 50, {
     message: "Display name must be between 3 and 50 characters",
   })
-  @Transform(({ value }) => value?.trim())
   displayName?: string;
 
   @ApiProperty({
