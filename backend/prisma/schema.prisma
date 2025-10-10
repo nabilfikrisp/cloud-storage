@@ -13,12 +13,13 @@ enum Role {
 }
 
 model User {
-  id         String  @id @default(cuid())
-  email      String  @unique
-  isVerified Boolean @default(false) @map("is_verified")
-  username   String  @unique
-  avatar     String?
-  role       Role    @default(USER)
+  id          String  @id @default(cuid())
+  email       String  @unique
+  isVerified  Boolean @default(false) @map("is_verified")
+  username    String  @unique
+  displayName String? @map("display_name")
+  avatar      String?
+  role        Role    @default(USER)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -28,6 +29,7 @@ model User {
   savedPost SavedPost[]
 
   @@index([role], name: "user_role_idx")
+  @@index([username], name: "user_username_idx")
   @@map("user")
 }
 
