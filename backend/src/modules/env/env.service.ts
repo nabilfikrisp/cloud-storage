@@ -34,16 +34,20 @@ export class EnvService {
     return Number(this.config.get<string>("PORT", "3001"));
   }
 
+  get jwtExpiresIn(): string {
+    return this.config.get<string>("JWT_EXPIRES_IN", "30m");
+  }
+
+  get saltRounds(): number {
+    return Number(this.config.get<string>("SALT_ROUNDS", "8"));
+  }
+
   get databaseUrl(): string {
     return this.config.get<string>("DATABASE_URL")!;
   }
 
   get jwtSecret(): string {
     return this.config.get<string>("JWT_SECRET")!;
-  }
-
-  get jwtExpiresIn(): string {
-    return this.config.get<string>("JWT_EXPIRES_IN", "30m");
   }
 
   get googleClientId(): string {
