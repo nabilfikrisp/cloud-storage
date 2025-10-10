@@ -1,8 +1,19 @@
 import { SuccessResponse } from "@/common/responses/success-response.dto";
-import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import { AuthService } from "./auth.service";
-import { SignUpDto } from "./dtos/sign-up.dto";
-import { SignInDto } from "./dtos/sign-in.dto";
+import { SignInDto } from "./dto/sign-in.dto";
+import { SignUpDto } from "./dto/sign-up.dto";
+import { AuthGuard } from "@nestjs/passport";
+import type { GoogleCallbackReq } from "@/common/interfaces/auth-req.interface";
 
 @Controller("auth")
 export class AuthController {
@@ -30,14 +41,41 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async postSignIn(@Body() signInDto: SignInDto) {
     try {
-      const { accessToken, user } =
-        await this.authService.signInLocal(signInDto);
+      const { token, user } = await this.authService.signInLocal(signInDto);
 
       return new SuccessResponse({
         message: "User signed in successfully",
         data: {
           user,
-          accessToken,
+          token,
+        },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  @Get("google")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("google"))
+  async googleAuth() {
+    // Guard redirects
+  }
+
+  @Get("google/callback")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("google"))
+  async googleAuthRedirect(@Req() req: GoogleCallbackReq) {
+    try {
+      const user = req.user;
+      const token = await this.authService.issueJwt(user);
+
+      return new SuccessResponse({
+        message: "Google OAuth successful",
+        data: {
+          user,
+          token,
         },
         statusCode: HttpStatus.OK,
       });

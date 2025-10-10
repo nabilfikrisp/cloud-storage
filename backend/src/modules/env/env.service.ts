@@ -11,7 +11,13 @@ export class EnvService {
 
   // 👇 Manual validation logic
   private validateEnv() {
-    const requiredKeys = ["JWT_SECRET", "DATABASE_URL"];
+    const requiredKeys = [
+      "JWT_SECRET",
+      "DATABASE_URL",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "GOOGLE_CALLBACK_URL",
+    ];
     for (const key of requiredKeys) {
       if (!this.config.get(key)) {
         this.logger.error(`Missing required environment variable: ${key}`);
@@ -38,5 +44,17 @@ export class EnvService {
 
   get jwtExpiresIn(): string {
     return this.config.get<string>("JWT_EXPIRES_IN", "30m");
+  }
+
+  get googleClientId(): string {
+    return this.config.get<string>("GOOGLE_CLIENT_ID")!;
+  }
+
+  get googleClientSecret(): string {
+    return this.config.get<string>("GOOGLE_CLIENT_SECRET")!;
+  }
+
+  get googleCallbackURL(): string {
+    return this.config.get<string>("GOOGLE_CALLBACK_URL")!;
   }
 }
