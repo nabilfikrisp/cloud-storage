@@ -66,6 +66,13 @@ export class AuthService {
     return { token, user: auth.user };
   }
 
+  async verifyUser(userId: string) {
+    return await this.prisma.user.update({
+      where: { id: userId },
+      data: { isVerified: true },
+    });
+  }
+
   async createUserAndAuth(dto: SignUpDto) {
     const username = dto.username ?? (await this.generateRandomUsername());
 
@@ -116,6 +123,7 @@ export class AuthService {
   async validateOAuthLogin(user: OAuthUser) {
     const { email, providerId, provider, name } = user;
 
+    // Case where user already logged in using this OAuth before
     const existingAuth = await this.findOauthAuthByProviderId(
       provider,
       providerId,
@@ -125,6 +133,7 @@ export class AuthService {
       return existingAuth.user;
     }
 
+    // Case where user has an account but hasn't used this OAuth before
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -137,6 +146,7 @@ export class AuthService {
       return newAuth.user;
     }
 
+    // Case where user is completely new
     const newAuth = await this.createUserAndAuthFromOauth({
       email,
       name,
@@ -163,7 +173,7 @@ export class AuthService {
 
     return await this.prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
-        data: { email, username, displayName: name },
+        data: { email, username, displayName: name, isVerified: true },
       });
 
       const newAuth = await tx.auth.create({
@@ -184,13 +194,22 @@ export class AuthService {
     provider: Provider,
     providerId: string,
   ) {
-    return await this.prisma.auth.create({
-      data: {
-        userId: user.id,
-        provider,
-        providerId,
-      },
-      include: { user: true },
+    return await this.prisma.$transaction(async (tx) => {
+      const newAuth = await tx.auth.create({
+        data: {
+          userId: user.id,
+          provider,
+          providerId,
+        },
+        include: { user: true },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { isVerified: true },
+      });
+
+      return newAuth;
     });
   }
 

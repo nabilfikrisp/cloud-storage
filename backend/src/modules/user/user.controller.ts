@@ -1,7 +1,7 @@
 import type { AuthReq } from "@/common/interfaces/auth-req.interface";
 import { Controller, Get, Param, Request, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
-import { AuthGuard } from "../auth/auth.guard";
+import { JwtAuthGuard } from "../auth/auth.guard";
 import { UserService } from "./user.service";
 
 @Controller("users")
@@ -9,7 +9,7 @@ export class UserController {
   constructor(private userService: UserService) {}
 
   @Get("me")
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async getMe(@Request() req: AuthReq) {
     const userId = req.user.sub;

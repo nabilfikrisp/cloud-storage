@@ -11,7 +11,7 @@ import { Request } from "express";
 import { EnvService } from "../env/env.service";
 
 @Injectable()
-export class AuthGuard implements CanActivate {
+export class JwtAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private envService: EnvService,

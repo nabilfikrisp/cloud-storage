@@ -7,19 +7,25 @@ import {
   HttpStatus,
   Post,
   Req,
+  Request,
   UseGuards,
 } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { SignInDto } from "./dto/sign-in.dto";
 import { SignUpDto } from "./dto/sign-up.dto";
 import { AuthGuard } from "@nestjs/passport";
-import type { GoogleCallbackReq } from "@/common/interfaces/auth-req.interface";
+import type {
+  AuthReq,
+  GoogleCallbackReq,
+} from "@/common/interfaces/auth-req.interface";
+import { ApiBearerAuth } from "@nestjs/swagger";
+import { JwtAuthGuard } from "./auth.guard";
 
 @Controller("auth")
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post("sign-up/local")
+  @Post("local/sign-up")
   @HttpCode(HttpStatus.CREATED)
   async postSignUp(@Body() signUpDto: SignUpDto) {
     try {
@@ -37,7 +43,7 @@ export class AuthController {
     }
   }
 
-  @Post("sign-in/local")
+  @Post("local/sign-in")
   @HttpCode(HttpStatus.OK)
   async postSignIn(@Body() signInDto: SignInDto) {
     try {
@@ -48,6 +54,27 @@ export class AuthController {
         data: {
           user,
           token,
+        },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  @Post("local/verify")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async postVerify(@Request() req: AuthReq) {
+    try {
+      const userId = req.user.sub;
+      const user = await this.authService.verifyUser(userId);
+
+      return new SuccessResponse({
+        message: "User verified successfully",
+        data: {
+          user,
         },
         statusCode: HttpStatus.OK,
       });
