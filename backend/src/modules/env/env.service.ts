@@ -17,6 +17,9 @@ export class EnvService {
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
       "GOOGLE_CALLBACK_URL",
+      "GITHUB_CLIENT_ID",
+      "GITHUB_CLIENT_SECRET",
+      "GITHUB_CALLBACK_URL",
     ];
     for (const key of requiredKeys) {
       if (!this.config.get(key)) {
@@ -60,5 +63,17 @@ export class EnvService {
 
   get googleCallbackURL(): string {
     return this.config.get<string>("GOOGLE_CALLBACK_URL")!;
+  }
+
+  get githubClientId(): string {
+    return this.config.get<string>("GITHUB_CLIENT_ID")!;
+  }
+
+  get githubClientSecret(): string {
+    return this.config.get<string>("GITHUB_CLIENT_SECRET")!;
+  }
+
+  get githubCallbackURL(): string {
+    return this.config.get<string>("GITHUB_CALLBACK_URL")!;
   }
 }

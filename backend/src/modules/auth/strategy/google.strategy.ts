@@ -1,9 +1,9 @@
 import { PassportStrategy } from "@nestjs/passport";
-import { Strategy, VerifyCallback } from "passport-google-oauth20";
+import { Profile, Strategy, VerifyCallback } from "passport-google-oauth20";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { EnvService } from "@/modules/env/env.service";
-import { GoogleProfile } from "@/common/interfaces/google-profile.interface";
 import { AuthService } from "../auth.service";
+import { Provider } from "@prisma/client";
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
@@ -11,22 +11,18 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     env: EnvService,
     private authService: AuthService,
   ) {
-    const googleStrategyConfig = {
+    super({
       clientID: env.googleClientId,
       clientSecret: env.googleClientSecret,
       callbackURL: env.googleCallbackURL,
       scope: ["email", "profile"],
-    };
-
-    super({
-      ...googleStrategyConfig,
     });
   }
 
   validate(
     _accessToken: string,
     _refreshToken: string,
-    profile: GoogleProfile,
+    profile: Profile,
     done: VerifyCallback,
   ) {
     try {
@@ -47,8 +43,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
         );
       }
 
-      const user = this.authService.validateGoogleLogin({
-        provider: "GOOGLE",
+      const user = this.authService.validateOAuthLogin({
+        provider: Provider.GOOGLE,
         providerId: id,
         name: displayName,
         email,

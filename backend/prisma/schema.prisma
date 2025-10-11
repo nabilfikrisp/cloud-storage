@@ -36,6 +36,7 @@ model User {
 enum Provider {
   LOCAL
   GOOGLE
+  GITHUB
 }
 
 model Auth {

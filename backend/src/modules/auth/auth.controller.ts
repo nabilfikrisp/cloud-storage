@@ -83,4 +83,32 @@ export class AuthController {
       throw error;
     }
   }
+
+  @Get("github")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("github"))
+  async githubAuth() {
+    // Guard redirects
+  }
+
+  @Get("github/callback")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("github"))
+  async githubAuthRedirect(@Req() req: GoogleCallbackReq) {
+    try {
+      const user = req.user;
+      const token = await this.authService.issueJwt(user);
+
+      return new SuccessResponse({
+        message: "Github OAuth successful",
+        data: {
+          user,
+          token,
+        },
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }

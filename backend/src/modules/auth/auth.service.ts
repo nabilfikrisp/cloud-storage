@@ -8,7 +8,7 @@ import * as bcrypt from "bcrypt";
 import { PrismaService } from "../prisma/prisma.service";
 import { SignInDto } from "./dto/sign-in.dto";
 import { SignUpDto } from "./dto/sign-up.dto";
-import { UserFromGoogle } from "@/common/interfaces/google-profile.interface";
+import { OAuthUser } from "@/common/interfaces/oauth.interface";
 import { Provider, User } from "@prisma/client/wasm";
 import { EnvService } from "../env/env.service";
 
@@ -112,17 +112,19 @@ export class AuthService {
     return { accessToken, expiresIn };
   }
 
-  // Google OAuth functions
-  async validateGoogleLogin(user: UserFromGoogle) {
+  // OAuth functions
+  async validateOAuthLogin(user: OAuthUser) {
     const { email, providerId, provider, name } = user;
-    // Check if this Google account is already linked
-    const existingGoogleAuth =
-      await this.findGoogleAuthByProviderId(providerId);
-    if (existingGoogleAuth) {
-      return existingGoogleAuth.user;
+
+    const existingAuth = await this.findOauthAuthByProviderId(
+      provider,
+      providerId,
+    );
+
+    if (existingAuth) {
+      return existingAuth.user;
     }
 
-    //  If email already used (local or another provider)
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -135,8 +137,7 @@ export class AuthService {
       return newAuth.user;
     }
 
-    //  New Google user — create both
-    const newAuth = await this.createUserAndAuthFromGoogle({
+    const newAuth = await this.createUserAndAuthFromOauth({
       email,
       name,
       providerId,
@@ -145,14 +146,17 @@ export class AuthService {
     return newAuth.user;
   }
 
-  private async findGoogleAuthByProviderId(providerId: string) {
+  private async findOauthAuthByProviderId(
+    provider: Provider,
+    providerId: string,
+  ) {
     return await this.prisma.auth.findFirst({
-      where: { provider: Provider.GOOGLE, providerId },
+      where: { provider: provider, providerId },
       include: { user: true },
     });
   }
 
-  private async createUserAndAuthFromGoogle(user: UserFromGoogle) {
+  private async createUserAndAuthFromOauth(user: OAuthUser) {
     const { email, name, providerId, provider } = user;
 
     const username = await this.convertDisplayNameToUsername(name);
