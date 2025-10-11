@@ -67,8 +67,7 @@ export class AuthService {
   }
 
   async createUserAndAuth(dto: SignUpDto) {
-    const username =
-      dto.username ?? (await this.generateRandomUniqueUsername());
+    const username = dto.username ?? (await this.generateRandomUsername());
 
     const displayName = dto.displayName ?? username;
 
@@ -96,37 +95,6 @@ export class AuthService {
     });
   }
 
-  async validateGoogleLogin(user: UserFromGoogle) {
-    const { email, providerId, provider, name } = user;
-    // Check if this Google account is already linked
-    let auth = await this.findGoogleAuthByProviderId(providerId);
-    if (auth) {
-      return auth.user;
-    }
-
-    //  If email already used (local or another provider)
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
-    });
-    if (existingUser) {
-      auth = await this.createAuthForExistingUser(
-        existingUser,
-        provider,
-        providerId,
-      );
-      return auth.user;
-    }
-
-    //  New Google user — create both
-    auth = await this.createUserAndAuthFromGoogle({
-      email,
-      name,
-      providerId,
-      provider,
-    });
-    return auth.user;
-  }
-
   async issueJwt(user: User) {
     const payload = {
       sub: user.id,
@@ -144,6 +112,39 @@ export class AuthService {
     return { accessToken, expiresIn };
   }
 
+  // Google OAuth functions
+  async validateGoogleLogin(user: UserFromGoogle) {
+    const { email, providerId, provider, name } = user;
+    // Check if this Google account is already linked
+    const existingGoogleAuth =
+      await this.findGoogleAuthByProviderId(providerId);
+    if (existingGoogleAuth) {
+      return existingGoogleAuth.user;
+    }
+
+    //  If email already used (local or another provider)
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (existingUser) {
+      const newAuth = await this.createAuthForExistingUser(
+        existingUser,
+        provider,
+        providerId,
+      );
+      return newAuth.user;
+    }
+
+    //  New Google user — create both
+    const newAuth = await this.createUserAndAuthFromGoogle({
+      email,
+      name,
+      providerId,
+      provider,
+    });
+    return newAuth.user;
+  }
+
   private async findGoogleAuthByProviderId(providerId: string) {
     return await this.prisma.auth.findFirst({
       where: { provider: Provider.GOOGLE, providerId },
@@ -154,7 +155,7 @@ export class AuthService {
   private async createUserAndAuthFromGoogle(user: UserFromGoogle) {
     const { email, name, providerId, provider } = user;
 
-    const username = await this.displayNameToUsername(name);
+    const username = await this.convertDisplayNameToUsername(name);
 
     return await this.prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
@@ -189,14 +190,15 @@ export class AuthService {
     });
   }
 
-  private async checkEmailIsTaken(email: string): Promise<boolean> {
+  // User and Auth helper functions
+  private async checkEmailIsTaken(email: string) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
     return existingUser ? true : false;
   }
 
-  private async checkUsernameIsTaken(username: string): Promise<boolean> {
+  private async checkUsernameIsTaken(username: string) {
     const existingUser = await this.prisma.user.findUnique({
       where: { username },
     });
@@ -218,54 +220,23 @@ export class AuthService {
   }
 
   // Password functions
-  private async hashPassword(password: string): Promise<string> {
+  private async hashPassword(password: string) {
     const saltRounds = this.env.saltRounds;
     return await bcrypt.hash(password, saltRounds);
   }
 
-  private async validatePassword(
-    password: string,
-    hash: string,
-  ): Promise<boolean> {
+  private async validatePassword(password: string, hash: string) {
     return await bcrypt.compare(password, hash);
   }
 
   // Username functions
-  private async generateRandomUniqueUsername(): Promise<string> {
-    const adjectives = [
-      "brave",
-      "calm",
-      "swift",
-      "clever",
-      "bright",
-      "mellow",
-      "wild",
-      "bold",
-      "quiet",
-      "lucky",
-    ];
-
-    const nouns = [
-      "lion",
-      "falcon",
-      "river",
-      "forest",
-      "storm",
-      "phoenix",
-      "panda",
-      "mountain",
-      "comet",
-      "dream",
-    ];
-
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const base = `${adjective}_${noun}`;
+  private async generateRandomUsername() {
+    const base = `${this.getRandomAdjective()}_${this.getRandomNoun()}`;
 
     return await this.generateUniqueUsername(base);
   }
 
-  private async displayNameToUsername(displayName: string): Promise<string> {
+  private async convertDisplayNameToUsername(displayName: string) {
     const words = displayName.split(/\s+/).filter(Boolean);
     const base = words.length > 1 ? `${words[0]}${words[1]}` : words[0];
 
@@ -273,7 +244,7 @@ export class AuthService {
     return await this.generateUniqueUsername(sanitizedBase);
   }
 
-  private async generateUniqueUsername(baseUsername: string): Promise<string> {
+  private async generateUniqueUsername(baseUsername: string) {
     for (let attempt = 0; attempt < 10; attempt++) {
       const randomNumber = Math.floor(Math.random() * 10000);
       const username = `${baseUsername}_${randomNumber}`;
@@ -288,7 +259,7 @@ export class AuthService {
     return `user_${Date.now()}`;
   }
 
-  private sanitizeForUsername(input: string): string {
+  private sanitizeForUsername(input: string) {
     if (!input || typeof input !== "string") {
       return "user";
     }
@@ -308,5 +279,39 @@ export class AuthService {
     }
 
     return sanitized;
+  }
+
+  private getRandomAdjective() {
+    const ADJECTIVES = [
+      "brave",
+      "calm",
+      "swift",
+      "clever",
+      "bright",
+      "mellow",
+      "wild",
+      "bold",
+      "quiet",
+      "lucky",
+    ];
+
+    return ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  }
+
+  private getRandomNoun() {
+    const NOUNS = [
+      "lion",
+      "falcon",
+      "river",
+      "forest",
+      "storm",
+      "phoenix",
+      "panda",
+      "mountain",
+      "comet",
+      "dream",
+    ];
+
+    return NOUNS[Math.floor(Math.random() * NOUNS.length)];
   }
 }
